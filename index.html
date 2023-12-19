@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.7.1.slim.js" integrity="sha256-UgvvN8vBkgO0luPSUl2s8TIlOSYRoGFAX4jlCIm9Adc=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    <style>
+        body{
+            font-size: 9pt; 
+        }
+
+        .resultBox {            
+            height: 300px; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 9pt; 
+            border:1px solid #AAA; 
+            background-color: #cce5ff;             
+        }
+
+        .parameterBox{
+            width:150px; height:300px;font-size:10pt; margin-right: 10px;
+        }
+
+        .parameterBox textarea{
+            width:100%;
+            height: 100%;
+        }
+
+        .delete-btn {
+            color:#AAA;
+        }
+
+        .delete-btn :hover{
+            color:blue;
+        }
+
+        .title-text{
+            font-size: 11pt; 
+            font-weight: bold;
+            margin-top: 6px;
+            margin-bottom: 2px;
+        }
+
+        .small-text{
+            font-size: 8pt; 
+            font-style: italic;
+            color: #1f399e;
+        }
+
+        .btn-group-sm>.btn, .btn-sm {
+            font-size: 8pt;
+            --bs-btn-padding-y: 0.125rem;        
+        }
+
+        textarea.form-control{
+            font-size: 9pt;
+        }
+
+    </style>
+    <script>
+    const LAST_SETTING = "cgLastSetting";
+    //============================================================================  UXMan
+    const   UXMan = {
+        countParameters : 1,    
+        // parameters : [],
+        // header  : '',
+        // footer  : '',
+        // pattern : 
+        // lastSettings    : {},
+        initUI : function(){
+            let lastSettings = this.loadlastSetting();
+            if( ! lastSettings ) return ;
+
+            
+            $('#cgHeader').val( lastSettings.header);
+            $('#cgFooter').val( lastSettings.footer);
+            $('#cgPattern').val(lastSettings.pattern);
+
+            let parameterValues = [];
+            for ( i in lastSettings.parameters ){
+                parameterValues.push( lastSettings.parameters[i].join('\n') ) ;
+            }
+            this.countParameters = parameterValues.length;
+            this.renderParameterPanel(parameterValues );            
+        },
+
+        addParameter : function() {
+            this.countParameters++;
+            this.renderParameterPanel();            
+        },
+        
+        deleteParameter : function() {
+            this.countParameters--;
+            if( this.countParameters < 1 ) this.countParameters=1;
+            this.renderParameterPanel();
+        },
+
+        renderParameterPanel : function(parameterValues) {            
+            if(  !parameterValues ){
+                parameterValues = [];
+                for ( let i=0; i<this.countParameters; i++){
+                    parameterValues.push( $(`#parameter${i}`).val() );
+                }
+            }
+                        
+            console.log( parameterValues );
+
+            $('#parameterPanel').empty();
+            for ( let i=0; i<this.countParameters; i++){
+                let parameterBoxHtml = 
+         `<div >                            
+                <div class="small-text">#param${i}#</div>
+                <textarea id="parameter${i}" class="parameterBox form-control"></textarea>
+            </div>`;
+            $('#parameterPanel').append( parameterBoxHtml );            
+            }
+
+            // 값 restore
+            for ( let i=0; i<parameterValues.length; i++){
+                console.log( parameterValues[i] );
+                $(`#parameter${i}`).val( parameterValues[i]);                
+            }            
+        } ,
+
+        getParameters : function() {
+            let parameters = [];
+            for ( let i=0; i<this.countParameters; i++){
+                parameters.push( $(`#parameter${i}`).val().split('\n'));
+            }
+            return parameters;
+        },
+
+        saveLastSetting : function() {
+            console.log( JSON.stringify( this.getParameters() ));
+            let lastSettings = {};
+            lastSettings.header = $('#cgHeader').val();
+            lastSettings.footer = $('#cgFooter').val();
+            lastSettings.pattern = $('#cgPattern').val();
+            lastSettings.parameters = this.getParameters();
+            console.log( lastSettings );
+
+            localStorage.setItem( LAST_SETTING, JSON.stringify( lastSettings ));
+        },
+
+        loadlastSetting : function() {        
+            let lastSettings = JSON.parse (localStorage.getItem(LAST_SETTING));
+            if( lastSettings ){
+                countParameters = lastSettings.parameters ;                
+            }   
+            return lastSettings;                     
+        }
+    };   
+    //============================================================================  CodeMan
+    const   CodeMan = {
+        build : function( pattern, parameters, header, footer  ) {
+            
+
+            let pivotedParameters = [];
+            let firstParamters = parameters[0];
+            let outputs = [];
+            
+            console.log( 'firstParamters.length ', firstParamters.length );
+            for ( let i=0; i<firstParamters.length; i++ ) {
+                let output = "" + pattern;  // 
+                let pivoted = [];
+                for ( let row =0; row<parameters.length; row++){
+                    output = output.replaceAll( `#param${row}#`, parameters[row][i]);
+                    pivoted.push( parameters[row][i] );
+                }            
+
+                outputs.push( output ) ;
+                console.log( output );
+                pivotedParameters.push( pivoted );
+            }                    
+
+
+            return header + "\n" + outputs.join("\n") + "\n" + footer ;
+        },
+    };
+
+    const   Templates = [
+        {   title : 'Query Class',
+            header:`
+package kr.co.starbucks.order.domain.model.queries;
+
+import kr.co.starbucks.order.application.internal.facadeservice.dto.NaverTableValidReqDto;
+import lombok.Builder;
+import lombok.Getter;
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.Map;
+
+@Getter
+@Builder
+public class #name# {`,
+            pattern:'   #param0#   #param1#;',
+            footer:'}'
+},
+    {title : 'Command Class'},
+    {title : 'Entity Class'},
+    {title : 'Enum Class'},
+    ];
+    //============================================================================= EnTRY
+    $(function() {
+        localStorage.getItem("cgTemplates");        
+        UXMan.initUI();
+        
+
+        $('#btnAddParameter').click( function(){
+            UXMan.addParameter();
+        });
+
+        $('#btnDeleteParameter').click( function(){
+            UXMan.deleteParameter();
+        });
+
+        $('#btnGenParam').click( function(){       
+            let pattern = $('#cgPatterm').val();
+            let parameters = [];
+            for ( let i=0; i<UXMan.countParameters; i++){
+                parameters.push( $(`#parameter${i}`).val().split('\n'));
+            }
+            
+            console.log( parameters );
+            $('#ParamResult').text( CodeMan.build( pattern, parameters, $('#cgHeader').val(),  $('#cgFooter').val())) ;
+            
+        });
+
+        $('#btnSaveLastSetting').click(function(){
+            UXMan.saveLastSetting();
+        });
+
+        var templateModal = document.getElementById('staticBackdrop')
+        templateModal.addEventListener('show.bs.modal', function (event) {
+            $('#cgTemplateListBox').empty();
+            Templates.forEach ( template => {
+                console.log( template );
+                $('#cgTemplateListBox').append( `<li class="list-group-item">${template.title}</li>`)
+            })
+        })
+
+
+        $('#cgTemplateListBox').on('click','li',  function(){
+            $('#cgTemplateListBox>li').removeClass('active');
+            $(this).addClass('active');
+            console.log( $(this).text() );
+
+            
+        });
+
+        $('#cgSelectTempl').on('click', function(){
+            $('#cgHeader').text( Templates[0].header );
+            $('#cgFooter').text( Templates[0].footer );
+            $('#cgPatterm').val( Templates[0].pattern );
+            // templateModal.hide();
+        });
+    });
+
+    </script>
+    </head>
+    <body style="background: #ecf0f3">
+        <div class="container-fluid">
+
+      <div  id="profile" >
+        <h6 class="mt-1">GEN CODE</h6>
+
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">            
+            Template 선택
+        </button>
+
+        <button id="btnSaveLastSetting" type="button" class="btn btn-sm btn-primary">
+            SAVE LAST_SETTING
+        </button>
+
+        <div class="mt-4 mb-1">
+            <span class="title-text me-5">HEADER</span>
+        </div>
+        <textarea id="cgHeader"  class="form-control" rows="3" placeholder="필수값 아님"></textarea>
+
+        <div class="mt-4 mb-1">
+            <span class="title-text me-5">PATTERN</span>
+        </div>
+        <div class="input-group input-group-sm mb-3">
+            <input id="cgPattern" type="text" class="form-control" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default" value='map.put("#param0#", #param1#)'>
+        </div>
+
+
+        <div class="mt-4 mb-1">
+            <span class="title-text me-5">PARAMETERS</span>
+            <button id="btnAddParameter" class="btn btn-sm btn-light"><span class="mx-2"><i class="bi bi-plus-circle-fill delete-btn"></i></span>ADD</button>
+            <button id="btnDeleteParameter" class="btn btn-sm btn-light"><span class="mx-2"><i class="bi bi-x-circle-fill delete-btn"></i></span>DELETE</button>
+        </div>
+
+        <div id="parameterPanel" class="d-flex justify-content-start">                      
+        </div>
+
+        <div class="mt-4 mb-1">
+            <span class="title-text me-5">FOOTER</span>
+        </div>
+        <textarea id="cgFooter"  class="form-control" rows="3" placeholder="필수값 아님"></textarea>
+
+
+        <!-- BUTTON LIST -->
+        <div class="d-grid gap-2 my-3">
+            <button id="btnGenParam" class="btn btn-primary">GENERATE CODE</button>            
+        </div>
+
+        <div class="mt-4 mb-1">
+            <span class="title-text me-5">RESULT CODE</span>
+        </div>
+        <div class="row px-2">            
+            <textarea id="ParamResult"  class="resultBox" ></textarea>
+        </div>
+
+      </div>
+      <!-- PARAMETER TAB END -->
+            
+        </div>
+
+
+        <!-- Modal -->
+        <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg" id="">
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">Template Select</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul id="cgTemplateListBox" class="list-group" >
+                        <li class="list-group-item">An item</li>
+                        <li class="list-group-item">A second item</li>
+                        <li class="list-group-item">A third item</li>
+                        <li class="list-group-item">A fourth item</li>
+                        <li class="list-group-item">And a fifth one</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button id="cgSelectTempl" type="button" class="btn btn-primary" data-bs-dismiss="modal">select</button>
+                </div>
+            </div>
+            </div>
+        </div>
+
+    </body>
+</html>
